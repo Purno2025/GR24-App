@@ -1,9 +1,9 @@
 name: Build Win & Mac
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:   # চাইলে ম্যানুয়ালি রান করবেন
   push:
-    branches: [ main ]
+    branches: [ main ] # main এ push হলে অটো রান হবে
 
 jobs:
   build:
@@ -21,12 +21,12 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Show files (debug)
+      - name: Show project files (debug)
         run: |
+          echo "Current path:" 
           pwd
+          echo "Files here:"
           ls -la
-          echo "----- recursive -----"
-          ls -R || true
 
       - name: Install dependencies
         run: |
