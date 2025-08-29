@@ -1,9 +1,9 @@
 name: Build macOS App
 
 on:
-  workflow_dispatch:      # হাতে রান করতে পারবেন
+  workflow_dispatch:
   push:
-    branches: [ main ]    # main এ push হলে অটো রান
+    branches: [ main ]
 
 jobs:
   build-mac:
@@ -16,7 +16,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.11'   # setup-python installs the universal2 build
 
       - name: Show project files (debug)
         run: |
@@ -26,15 +26,24 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pyinstaller PySide6 pandas openpyxl
+          # Pin a recent, stable toolchain
+          pip install "pyinstaller>=6.6" pyinstaller-hooks-contrib
+          pip install PySide6 pandas openpyxl
 
-      # .app বানাতে --onefile ব্যবহার করবেন না
+      # Build a universal2 .app (runs on Intel & Apple Silicon)
       - name: Build .app with PyInstaller
         run: |
-          pyinstaller --noconfirm --windowed --name "GR24" gr24_pricing_app.py
-          # আউটপুট: dist/GR24.app
+          pyinstaller --noconfirm --windowed --target-arch universal2 --name "GR24" gr24_pricing_app.py
+          # Output: dist/GR24.app
 
-      # .app zip করলে পাঠানো সহজ হয়
+      # Make sure the main binary is executable
+      - name: Fix permissions & inspect
+        run: |
+          chmod +x "dist/GR24.app/Contents/MacOS/GR24" || true
+          ls -la "dist/GR24.app/Contents/MacOS"
+          file "dist/GR24.app/Contents/MacOS/GR24"   # shows architectures
+
+      # Zip correctly on macOS (preserves bundle metadata)
       - name: Zip the app
         run: |
           cd dist
