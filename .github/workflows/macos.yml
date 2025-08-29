@@ -1,4 +1,4 @@
-name: Build macOS App
+name: Build macOS App (ARM64)
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-mac:
-    runs-on: macos-latest
+    runs-on: macos-latest   # GitHub runners are ARM64
 
     steps:
       - name: Checkout
@@ -16,7 +16,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'   # setup-python installs the universal2 build
+          python-version: '3.11'
 
       - name: Show project files (debug)
         run: |
@@ -26,33 +26,29 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # Pin a recent, stable toolchain
           pip install "pyinstaller>=6.6" pyinstaller-hooks-contrib
           pip install PySide6 pandas openpyxl
 
-      # Build a universal2 .app (runs on Intel & Apple Silicon)
-      - name: Build .app with PyInstaller
+      - name: Build .app with PyInstaller (ARM64)
         run: |
-          pyinstaller --noconfirm --windowed --target-arch universal2 --name "GR24" gr24_pricing_app.py
+          # No --target-arch; build native (arm64) to avoid universal2 issues
+          pyinstaller --noconfirm --windowed --collect-all PySide6 --name "GR24" gr24_pricing_app.py
           # Output: dist/GR24.app
 
-      # Make sure the main binary is executable
       - name: Fix permissions & inspect
         run: |
           chmod +x "dist/GR24.app/Contents/MacOS/GR24" || true
-          ls -la "dist/GR24.app/Contents/MacOS"
-          file "dist/GR24.app/Contents/MacOS/GR24"   # shows architectures
+          file "dist/GR24.app/Contents/MacOS/GR24"
 
-      # Zip correctly on macOS (preserves bundle metadata)
       - name: Zip the app
         run: |
           cd dist
-          ditto -c -k --sequesterRsrc --keepParent "GR24.app" "GR24_mac.zip"
+          ditto -c -k --sequesterRsrc --keepParent "GR24.app" "GR24_mac_arm64.zip"
           ls -la
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: GR24-mac
-          path: dist/GR24_mac.zip
+          name: GR24-mac-arm64
+          path: dist/GR24_mac_arm64.zip
           if-no-files-found: error
