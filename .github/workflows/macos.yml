@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-mac:
-    runs-on: macos-latest   # GitHub runners are ARM64
+    runs-on: macos-latest
 
     steps:
       - name: Checkout
@@ -26,21 +26,53 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install "pyinstaller>=6.6" pyinstaller-hooks-contrib
+          # Pin to a stable toolchain
+          pip install "pyinstaller==6.8" "pyinstaller-hooks-contrib>=2025.1"
           pip install PySide6 pandas openpyxl
 
-      - name: Build .app with PyInstaller (ARM64)
+      - name: Clean previous build dirs
         run: |
-          # No --target-arch; build native (arm64) to avoid universal2 issues
-          pyinstaller --noconfirm --windowed --collect-all PySide6 --name "GR24" gr24_pricing_app.py
-          # Output: dist/GR24.app
+          rm -rf build dist GR24.spec || true
 
-      - name: Fix permissions & inspect
+      # Build ARM64 .app with only the Qt modules we need (Widgets/Core/Gui)
+      - name: Build .app with PyInstaller (ARM64 minimal Qt)
+        run: |
+          pyinstaller \
+            --noconfirm --clean --windowed --name "GR24" \
+            --collect-all PySide6 --collect-all shiboken6 \
+            --exclude-module PySide6.Qt3D* \
+            --exclude-module PySide6.QtBluetooth \
+            --exclude-module PySide6.QtCharts \
+            --exclude-module PySide6.QtDataVisualization \
+            --exclude-module PySide6.QtDesigner \
+            --exclude-module PySide6.QtHelp \
+            --exclude-module PySide6.QtHttpServer \
+            --exclude-module PySide6.QtLocation \
+            --exclude-module PySide6.QtMultimedia* \
+            --exclude-module PySide6.QtNetworkAuth \
+            --exclude-module PySide6.QtNfc \
+            --exclude-module PySide6.QtOpenGL* \
+            --exclude-module PySide6.QtPdf* \
+            --exclude-module PySide6.QtPositioning \
+            --exclude-module PySide6.QtQml* \
+            --exclude-module PySide6.QtQuick* \
+            --exclude-module PySide6.QtRemoteObjects \
+            --exclude-module PySide6.QtSensors \
+            --exclude-module PySide6.QtSerial* \
+            --exclude-module PySide6.QtStateMachine \
+            --exclude-module PySide6.QtSvg* \
+            --exclude-module PySide6.QtTest \
+            --exclude-module PySide6.QtTextToSpeech \
+            --exclude-module PySide6.QtUiTools \
+            --exclude-module PySide6.QtWeb* \
+            gr24_pricing_app.py
+
+      - name: Ensure permissions & inspect binary
         run: |
           chmod +x "dist/GR24.app/Contents/MacOS/GR24" || true
           file "dist/GR24.app/Contents/MacOS/GR24"
 
-      - name: Zip the app
+      - name: Zip the app (preserves bundle metadata)
         run: |
           cd dist
           ditto -c -k --sequesterRsrc --keepParent "GR24.app" "GR24_mac_arm64.zip"
