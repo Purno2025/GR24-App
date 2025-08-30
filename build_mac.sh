@@ -8,3 +8,4 @@ pip3 install -r requirements.txt
 pyinstaller --onefile --windowed --name "GR24" --icon=icon.icns GR24_Mac.py
 
 echo "Build complete! Check the 'dist' folder for GR24"
+
