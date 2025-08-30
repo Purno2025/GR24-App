@@ -25,16 +25,26 @@ jobs:
         python -m pip install --upgrade pip
         pip install pandas PySide6 pyinstaller
         
+    - name: Clean previous builds
+      run: |
+        rm -rf build dist
+        rm -f *.spec
+
     - name: Build executable
       run: |
-        pyinstaller --onefile --windowed --name "GR24_Mac" mac.py
-        
+        pyinstaller --onefile --windowed --name "GR24_Mac" --clean mac.py
+
+    - name: Verify executable
+      run: |
+        ls -la dist/
+        file dist/GR24_Mac
+
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: GR24-Mac-Executable
         path: dist/GR24_Mac
-        
+
     - name: Create release
       if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
       uses: softprops/action-gh-release@v1
@@ -56,5 +66,9 @@ jobs:
           - German and English language support
           - Excel export functionality
           - No installation required
+          
+          ## System Requirements:
+          - macOS 10.14 or later
+          - Intel or Apple Silicon Mac
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
